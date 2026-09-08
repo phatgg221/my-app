@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Shoppee | Vendor Onboarding & Ops Dashboard',
+  title: 'Shopee | Vendor Onboarding & Ops Centre',
   description: 'Manage vendor onboarding stages, compliance audit trails, and KYC document repository.',
 };
 
@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 font-sans">
+      <body className="min-h-full flex flex-col bg-[#F6F6F6] text-slate-800 font-sans">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

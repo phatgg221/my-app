@@ -31,27 +31,27 @@ const STAGE_CONFIG: Record<
 > = {
   CONTRACT_SENT: {
     label: 'Contract Sent',
-    badgeClass: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+    badgeClass: 'bg-sky-50 text-sky-700 border-sky-200',
     stepNumber: 1,
   },
   CONTRACT_SIGNED: {
     label: 'Contract Signed',
-    badgeClass: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     stepNumber: 2,
   },
   KYC_DOCS_RECEIVED: {
     label: 'KYC Docs Received',
-    badgeClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
     stepNumber: 3,
   },
   KYC_VERIFIED: {
     label: 'KYC Verified',
-    badgeClass: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
     stepNumber: 4,
   },
   ACTIVE: {
     label: 'Active Vendor',
-    badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     stepNumber: 5,
   },
 };
@@ -167,94 +167,98 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Global Navbar with Mock Login */}
+    <div className="min-h-screen bg-[#F6F6F6] text-slate-800 flex flex-col">
+      {/* Global Navbar with Shopee Orange Branding */}
       <Navbar />
 
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-xs font-medium border animate-in slide-in-from-bottom-3 duration-200 ${
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold border animate-in slide-in-from-bottom-3 duration-200 bg-white ${
             toast.type === 'success'
-              ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/30'
-              : 'bg-red-950/90 text-red-200 border-red-500/30'
+              ? 'text-emerald-800 border-l-4 border-l-emerald-500 border-slate-200'
+              : 'text-red-800 border-l-4 border-l-red-500 border-slate-200'
           }`}
         >
           {toast.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           ) : (
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
           )}
           <span>{toast.message}</span>
         </div>
       )}
 
       {/* Main Content Area */}
-      <main className="max-w-7xl w-full mx-auto px-4 lg:px-8 py-8 flex-1 space-y-8">
+      <main className="max-w-7xl w-full mx-auto px-4 lg:px-8 py-8 flex-1 space-y-6">
         {/* KPI Metrics Cards */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          {/* Card 1: Total Vendors */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Total Vendors
               </span>
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-300">
+              <div className="p-2 rounded-xl bg-orange-50 text-[#EE4D2D]">
                 <Building2 className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-black text-white mt-2">{totalVendors}</p>
-            <p className="text-[11px] text-slate-500 mt-1">Managed across all regions</p>
+            <p className="text-3xl font-black text-slate-900 mt-2">{totalVendors}</p>
+            <p className="text-[11px] text-slate-500 mt-1">Managed across all sales regions</p>
           </div>
 
+          {/* Card 2: Stuck Vendors */}
           <div
             className={`border rounded-2xl p-5 shadow-sm transition-all ${
               stuckVendorsCount > 0
-                ? 'bg-red-950/20 border-red-500/30 ring-1 ring-red-500/20'
-                : 'bg-slate-900/90 border-slate-800'
+                ? 'bg-rose-50/70 border-rose-200 ring-1 ring-rose-200'
+                : 'bg-white border-slate-200/80'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+              <span className="text-xs font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                 Stuck Vendors (&gt; 7 Days)
               </span>
-              <div className="p-2 rounded-xl bg-red-500/10 text-red-400">
+              <div className="p-2 rounded-xl bg-rose-100 text-rose-600">
                 <Clock className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-black text-red-400 mt-2">{stuckVendorsCount}</p>
-            <p className="text-[11px] text-red-400/80 mt-1">Requires coordinator attention</p>
+            <p className="text-3xl font-black text-rose-700 mt-2">{stuckVendorsCount}</p>
+            <p className="text-[11px] text-rose-600/90 font-medium mt-1">Action required by coordinator</p>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          {/* Card 3: In Onboarding */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
                 In Onboarding
               </span>
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+              <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
                 <Layers className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-black text-amber-300 mt-2">{onboardingCount}</p>
-            <p className="text-[11px] text-slate-500 mt-1">Progressing through pipeline</p>
+            <p className="text-3xl font-black text-amber-600 mt-2">{onboardingCount}</p>
+            <p className="text-[11px] text-slate-500 mt-1">Progressing through KYC pipeline</p>
           </div>
 
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          {/* Card 4: Active Vendors */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
                 Active Vendors
               </span>
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-2xl font-black text-emerald-400 mt-2">{activeVendorsCount}</p>
-            <p className="text-[11px] text-slate-500 mt-1">Verified and live on marketplace</p>
+            <p className="text-3xl font-black text-emerald-600 mt-2">{activeVendorsCount}</p>
+            <p className="text-[11px] text-slate-500 mt-1">Fully verified and trading</p>
           </div>
         </section>
 
         {/* Action Controls & Filters */}
-        <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <section className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Search Box */}
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
@@ -263,7 +267,7 @@ export default function Dashboard() {
               placeholder="Search vendor name or region..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 text-slate-200 placeholder:text-slate-500 text-xs rounded-xl pl-10 pr-4 py-2.5 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+              className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs font-medium rounded-xl pl-10 pr-4 py-2.5 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30 focus:border-[#EE4D2D] transition-all"
             />
           </div>
 
@@ -271,20 +275,20 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             <button
               onClick={() => setFilterMode('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 filterMode === 'ALL'
-                  ? 'bg-slate-800 text-white border-slate-700'
-                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900'
+                  ? 'bg-[#EE4D2D] text-white border-[#EE4D2D] shadow-sm shadow-orange-500/20'
+                  : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
               All Vendors ({vendors.length})
             </button>
             <button
               onClick={() => setFilterMode('STUCK')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                 filterMode === 'STUCK'
-                  ? 'bg-red-950/80 text-red-300 border-red-500/40'
-                  : 'text-red-400/80 border-transparent hover:text-red-300 hover:bg-red-950/30'
+                  ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-500/20'
+                  : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
               }`}
             >
               <AlertTriangle className="w-3.5 h-3.5" />
@@ -292,20 +296,20 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setFilterMode('ONBOARDING')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 filterMode === 'ONBOARDING'
-                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
-                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900'
+                  ? 'bg-[#EE4D2D] text-white border-[#EE4D2D] shadow-sm shadow-orange-500/20'
+                  : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
               In Onboarding ({onboardingCount})
             </button>
             <button
               onClick={() => setFilterMode('ACTIVE')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 filterMode === 'ACTIVE'
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900'
+                  ? 'bg-[#EE4D2D] text-white border-[#EE4D2D] shadow-sm shadow-orange-500/20'
+                  : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
               Active ({activeVendorsCount})
@@ -316,41 +320,41 @@ export default function Dashboard() {
               onClick={loadVendors}
               disabled={loading}
               title="Refresh vendor list"
-              className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-950 border border-slate-800 hover:bg-slate-800 transition-colors ml-auto cursor-pointer"
+              className="p-2 rounded-xl text-slate-600 hover:text-[#EE4D2D] bg-slate-100 hover:bg-orange-50 border border-slate-200 transition-colors ml-auto cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-orange-400' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#EE4D2D]' : ''}`} />
             </button>
           </div>
         </section>
 
         {/* Vendor Table */}
-        <section className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+        <section className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/60 border-b border-slate-800 uppercase tracking-wider text-[11px] text-slate-400">
+              <thead className="bg-slate-50 border-b border-slate-200 uppercase tracking-wider text-[11px] text-slate-500">
                 <tr>
-                  <th className="py-3.5 px-5 font-semibold">Vendor Name</th>
-                  <th className="py-3.5 px-4 font-semibold">Region</th>
-                  <th className="py-3.5 px-4 font-semibold">Current Stage</th>
-                  <th className="py-3.5 px-4 font-semibold">Days in Stage</th>
-                  <th className="py-3.5 px-5 font-semibold text-right">Actions</th>
+                  <th className="py-3.5 px-5 font-bold">Vendor Name</th>
+                  <th className="py-3.5 px-4 font-bold">Region</th>
+                  <th className="py-3.5 px-4 font-bold">Current Stage</th>
+                  <th className="py-3.5 px-4 font-bold">Days in Stage</th>
+                  <th className="py-3.5 px-5 font-bold text-right">Actions</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="py-16 text-center text-slate-400">
-                      <Loader2 className="w-7 h-7 mx-auto animate-spin text-orange-500 mb-2" />
-                      <p className="font-medium text-xs">Loading vendor records from PostgreSQL...</p>
+                    <td colSpan={5} className="py-16 text-center text-slate-500">
+                      <Loader2 className="w-7 h-7 mx-auto animate-spin text-[#EE4D2D] mb-2" />
+                      <p className="font-semibold text-xs text-slate-700">Loading vendor records...</p>
                     </td>
                   </tr>
                 ) : filteredVendors.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-16 text-center text-slate-400">
-                      <Building2 className="w-9 h-9 mx-auto text-slate-700 mb-2" />
-                      <p className="text-sm font-semibold text-slate-300">No vendors found</p>
-                      <p className="text-xs text-slate-500 mt-1">Try adjusting your search query or filter selection.</p>
+                    <td colSpan={5} className="py-16 text-center text-slate-500">
+                      <Building2 className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                      <p className="text-sm font-bold text-slate-700">No vendors found</p>
+                      <p className="text-xs text-slate-400 mt-1">Try adjusting your search query or filter selection.</p>
                     </td>
                   </tr>
                 ) : (
@@ -358,7 +362,7 @@ export default function Dashboard() {
                     const isUpdating = updatingStageVendorId === v.id;
                     const stageInfo = STAGE_CONFIG[v.currentStage] || {
                       label: v.currentStage,
-                      badgeClass: 'bg-slate-700 text-slate-300',
+                      badgeClass: 'bg-slate-100 text-slate-700',
                       stepNumber: 0,
                     };
 
@@ -367,26 +371,26 @@ export default function Dashboard() {
                         key={v.id}
                         className={`transition-colors ${
                           v.isStuck
-                            ? 'bg-rose-950/15 border-l-4 border-l-rose-500 hover:bg-rose-950/25'
-                            : 'hover:bg-slate-800/40'
+                            ? 'bg-rose-50/50 border-l-4 border-l-rose-500 hover:bg-rose-50/80'
+                            : 'hover:bg-orange-50/20'
                         }`}
                       >
                         {/* 1. Vendor Name */}
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-slate-800 border border-slate-700/60 flex items-center justify-center font-bold text-slate-200 shrink-0">
+                            <div className="h-9 w-9 rounded-xl bg-orange-100 text-[#EE4D2D] border border-orange-200 flex items-center justify-center font-black text-sm shrink-0">
                               {v.name.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-slate-100 truncate">{v.name}</p>
-                              <p className="text-[11px] text-slate-500 font-mono">ID: {v.id.slice(0, 8)}...</p>
+                              <p className="font-bold text-slate-900 truncate text-sm">{v.name}</p>
+                              <p className="text-[11px] text-slate-400 font-mono">ID: {v.id.slice(0, 8)}...</p>
                             </div>
                           </div>
                         </td>
 
                         {/* 2. Region */}
                         <td className="py-4 px-4">
-                          <span className="px-2.5 py-1 text-slate-300 bg-slate-800/80 border border-slate-700/60 rounded-lg text-xs font-medium">
+                          <span className="px-2.5 py-1 text-slate-700 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold">
                             {v.region}
                           </span>
                         </td>
@@ -400,7 +404,7 @@ export default function Dashboard() {
                                 disabled={isUpdating}
                                 value={v.currentStage}
                                 onChange={(e) => handleStageChange(v.id, e.target.value as Stage)}
-                                className={`text-xs font-semibold rounded-lg pl-3 pr-8 py-1.5 border appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/40 transition-all ${
+                                className={`text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30 transition-all ${
                                   stageInfo.badgeClass
                                 } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                               >
@@ -408,15 +412,15 @@ export default function Dashboard() {
                                   <option
                                     key={stageKey}
                                     value={stageKey}
-                                    className="bg-slate-900 text-slate-200"
+                                    className="bg-white text-slate-800"
                                   >
                                     Step {config.stepNumber}: {config.label}
                                   </option>
                                 ))}
                               </select>
-                              <div className="absolute right-2.5 top-2.5 pointer-events-none text-slate-400">
+                              <div className="absolute right-2.5 top-2.5 pointer-events-none text-slate-500">
                                 {isUpdating ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#EE4D2D]" />
                                 ) : (
                                   <ChevronDown className="w-3.5 h-3.5" />
                                 )}
@@ -428,13 +432,13 @@ export default function Dashboard() {
                         {/* 4. Days in Stage (with Stuck Indicator) */}
                         <td className="py-4 px-4">
                           {v.isStuck ? (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">
-                              <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 border border-rose-300 font-bold">
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                               <span>{v.daysInStage} days (Stuck!)</span>
                             </div>
                           ) : (
-                            <div className="inline-flex items-center gap-1.5 text-slate-300">
-                              <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <div className="inline-flex items-center gap-1.5 text-slate-600 font-medium">
+                              <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                               <span>{v.daysInStage} days</span>
                             </div>
                           )}
@@ -446,23 +450,23 @@ export default function Dashboard() {
                             {/* View History Button */}
                             <button
                               onClick={() => setHistoryVendor(v)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 rounded-xl transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-[#EE4D2D] bg-slate-100 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 rounded-xl transition-all cursor-pointer"
                               title="View Stage Transition Audit History"
                             >
-                              <History className="w-3.5 h-3.5 text-orange-400" />
+                              <History className="w-3.5 h-3.5 text-[#EE4D2D]" />
                               <span className="hidden sm:inline">History</span>
                             </button>
 
                             {/* Manage Documents Button */}
                             <button
                               onClick={() => setDocumentsVendor(v)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 rounded-xl transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#EE4D2D] hover:text-white bg-orange-50 hover:bg-[#EE4D2D] border border-orange-200 rounded-xl transition-all shadow-sm cursor-pointer"
                               title="Manage S3/MinIO KYC Documents"
                             >
-                              <FileText className="w-3.5 h-3.5 text-sky-400" />
+                              <FileText className="w-3.5 h-3.5" />
                               <span className="hidden sm:inline">Documents</span>
                               {v.documentsCount > 0 && (
-                                <span className="px-1.5 py-0.2 text-[10px] font-bold bg-sky-500/20 text-sky-300 rounded-full border border-sky-500/30">
+                                <span className="px-1.5 py-0.2 text-[10px] font-black bg-[#EE4D2D] text-white rounded-full">
                                   {v.documentsCount}
                                 </span>
                               )}
