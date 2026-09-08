@@ -11,7 +11,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['services/server/**/*.ts'],
+      include: ['services/server/**/*.ts', 'lib/validations/**/*.ts'],
+      exclude: ['**/*.test.ts'],
     },
   },
 });

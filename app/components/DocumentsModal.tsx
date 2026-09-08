@@ -9,6 +9,11 @@ import {
   uploadVendorDocument,
 } from '@/app/vendor.service';
 import {
+  DocumentFileMetaSchema,
+  DocumentTypeEnum,
+  formatZodError,
+} from '@/lib/validations';
+import {
   X,
   FileText,
   UploadCloud,
@@ -53,6 +58,7 @@ export default function DocumentsModal({
     if (!vendor) return;
     try {
       setLoading(true);
+      setErrorMessage(null);
       const docs = await fetchVendorDocuments(vendor.id);
       setDocuments(docs);
     } catch (err: unknown) {
@@ -90,10 +96,41 @@ export default function DocumentsModal({
     };
   }, [vendor]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    // Client-side Zod validation on file size and mime type
+    const validation = DocumentFileMetaSchema.safeParse({
+      size: file.size,
+      type: file.type,
+    });
+
+    if (!validation.success) {
+      setErrorMessage(formatZodError(validation.error));
+      setSelectedFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    setErrorMessage(null);
+    setSelectedFile(file);
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vendor || !selectedFile) {
       setErrorMessage('Please select a file to upload.');
+      return;
+    }
+
+    // Client-side Zod validation on document type
+    const typeValidation = DocumentTypeEnum.safeParse(selectedType);
+    if (!typeValidation.success) {
+      setErrorMessage(formatZodError(typeValidation.error));
       return;
     }
 
@@ -199,10 +236,8 @@ export default function DocumentsModal({
                 <input
                   type="file"
                   required
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    setSelectedFile(file);
-                  }}
+                  onChange={handleFileChange}
+                  accept=".pdf,.png,.jpg,.jpeg,.webp"
                   className="w-full text-xs text-slate-700 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#EE4D2D] file:text-white hover:file:bg-[#d73211] file:cursor-pointer bg-white border border-slate-300 rounded-xl p-1.5 focus:outline-none"
                 />
               </div>

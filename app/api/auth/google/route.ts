@@ -1,27 +1,34 @@
 import { NextResponse } from 'next/server';
 import { upsertGoogleUser } from '@/services/server/vendorServerService';
+import { GoogleAuthSchema, formatZodError } from '@/lib/validations';
 
 /**
  * Controller: POST /api/auth/google
- * Authenticates/upserts a user signed in via Google OAuth.
+ * Authenticates/upserts a user signed in via Google OAuth with strict Zod validation.
  */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, avatar, role } = body;
 
-    if (!name || !email) {
+    const validationResult = GoogleAuthSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Name and email are required for Google authentication.' },
+        {
+          error: 'Validation failed',
+          message: formatZodError(validationResult.error),
+          details: validationResult.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
 
+    const { name, email, avatar, role } = validationResult.data;
+
     const user = await upsertGoogleUser({
       name,
       email,
-      avatar,
-      role,
+      avatar: avatar || undefined,
+      role: role || undefined,
     });
 
     return NextResponse.json(user);

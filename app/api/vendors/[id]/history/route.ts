@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVendorStageHistory } from '@/services/server/vendorServerService';
+import { VendorIdParamSchema, formatZodError } from '@/lib/validations';
 
 /**
  * Controller: GET /api/vendors/[id]/history
@@ -9,15 +10,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const rawParams = await params;
+    const paramValidation = VendorIdParamSchema.safeParse(rawParams);
 
-    if (!id) {
+    if (!paramValidation.success) {
       return NextResponse.json(
-        { error: 'Vendor ID is required' },
+        { error: 'Validation failed', message: formatZodError(paramValidation.error) },
         { status: 400 }
       );
     }
 
+    const { id } = paramValidation.data;
     const history = await getVendorStageHistory(id);
     return NextResponse.json(history);
   } catch (error: unknown) {

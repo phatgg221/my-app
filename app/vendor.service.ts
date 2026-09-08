@@ -1,5 +1,8 @@
 import apiClient from '@/lib/apiClient';
 import { Stage, DocumentType } from '@prisma/client';
+import { UpdateVendorStageSchema, VendorIdParamSchema, formatZodError } from '@/lib/validations';
+
+export type { Stage, DocumentType };
 
 export interface VendorItem {
   id: string;
@@ -23,6 +26,9 @@ export interface StageHistoryItem {
   user: {
     id: string;
     name: string;
+    email?: string;
+    avatar?: string;
+    role?: string;
   };
 }
 
@@ -38,8 +44,8 @@ export interface VendorDocumentItem {
 
 /**
  * VendorService:
- * Frontend service layer for all vendor operations, stage management,
- * history audits, and S3/MinIO KYC document handling.
+ * Frontend Client Service abstracting all vendor API calls away from React components.
+ * Strictly performs client-side Zod validation before dispatching requests to API routes.
  */
 export class VendorService {
   async fetchVendors(): Promise<VendorItem[]> {
@@ -52,23 +58,35 @@ export class VendorService {
     newStage: Stage,
     userId: string
   ): Promise<{ success: boolean; message: string }> {
+    // 1. Client-Side Zod Validation
+    const validation = UpdateVendorStageSchema.safeParse({ vendorId, newStage, userId });
+    if (!validation.success) {
+      throw new Error(`Validation Error: ${formatZodError(validation.error)}`);
+    }
+
     const response = await apiClient.patch<{ success: boolean; message: string }>(
       '/api/vendors/stage',
-      {
-        vendorId,
-        newStage,
-        userId,
-      }
+      validation.data
     );
     return response.data;
   }
 
   async fetchHistory(vendorId: string): Promise<StageHistoryItem[]> {
+    const paramValidation = VendorIdParamSchema.safeParse({ id: vendorId });
+    if (!paramValidation.success) {
+      throw new Error(`Validation Error: ${formatZodError(paramValidation.error)}`);
+    }
+
     const response = await apiClient.get<StageHistoryItem[]>(`/api/vendors/${vendorId}/history`);
     return response.data;
   }
 
   async fetchDocuments(vendorId: string): Promise<VendorDocumentItem[]> {
+    const paramValidation = VendorIdParamSchema.safeParse({ id: vendorId });
+    if (!paramValidation.success) {
+      throw new Error(`Validation Error: ${formatZodError(paramValidation.error)}`);
+    }
+
     const response = await apiClient.get<VendorDocumentItem[]>(`/api/vendors/${vendorId}/documents`);
     return response.data;
   }
@@ -78,6 +96,11 @@ export class VendorService {
     file: File,
     type: DocumentType
   ): Promise<VendorDocumentItem> {
+    const paramValidation = VendorIdParamSchema.safeParse({ id: vendorId });
+    if (!paramValidation.success) {
+      throw new Error(`Validation Error: ${formatZodError(paramValidation.error)}`);
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
@@ -95,10 +118,7 @@ export class VendorService {
   }
 }
 
-// Export singleton instance
 export const vendorService = new VendorService();
-
-// Standalone function exports for backward compatibility and flexible imports
 export const fetchVendors = () => vendorService.fetchVendors();
 export const updateVendorStage = (vendorId: string, newStage: Stage, userId: string) =>
   vendorService.updateStage(vendorId, newStage, userId);

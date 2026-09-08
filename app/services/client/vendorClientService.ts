@@ -1,5 +1,6 @@
 import apiClient from '@/lib/apiClient';
 import { Stage, DocumentType } from '@prisma/client';
+import { UpdateVendorStageSchema, VendorIdParamSchema, formatZodError } from '@/lib/validations';
 
 export interface VendorItem {
   id: string;
@@ -23,6 +24,9 @@ export interface StageHistoryItem {
   user: {
     id: string;
     name: string;
+    email?: string;
+    avatar?: string;
+    role?: string;
   };
 }
 
@@ -39,6 +43,7 @@ export interface VendorDocumentItem {
 /**
  * Frontend Client Service for Vendors:
  * Abstracts all HTTP requests away from React UI components.
+ * Performs client-side Zod validation before dispatching requests.
  */
 
 export async function fetchVendors(): Promise<VendorItem[]> {
@@ -51,23 +56,35 @@ export async function updateVendorStage(
   newStage: Stage,
   userId: string
 ): Promise<{ success: boolean; message: string }> {
+  // Client-side Zod validation
+  const validation = UpdateVendorStageSchema.safeParse({ vendorId, newStage, userId });
+  if (!validation.success) {
+    throw new Error(`Validation Error: ${formatZodError(validation.error)}`);
+  }
+
   const response = await apiClient.patch<{ success: boolean; message: string }>(
     '/api/vendors/stage',
-    {
-      vendorId,
-      newStage,
-      userId,
-    }
+    validation.data
   );
   return response.data;
 }
 
 export async function fetchVendorHistory(vendorId: string): Promise<StageHistoryItem[]> {
+  const paramValidation = VendorIdParamSchema.safeParse({ id: vendorId });
+  if (!paramValidation.success) {
+    throw new Error(`Validation Error: ${formatZodError(paramValidation.error)}`);
+  }
+
   const response = await apiClient.get<StageHistoryItem[]>(`/api/vendors/${vendorId}/history`);
   return response.data;
 }
 
 export async function fetchVendorDocuments(vendorId: string): Promise<VendorDocumentItem[]> {
+  const paramValidation = VendorIdParamSchema.safeParse({ id: vendorId });
+  if (!paramValidation.success) {
+    throw new Error(`Validation Error: ${formatZodError(paramValidation.error)}`);
+  }
+
   const response = await apiClient.get<VendorDocumentItem[]>(`/api/vendors/${vendorId}/documents`);
   return response.data;
 }
@@ -77,6 +94,11 @@ export async function uploadVendorDocument(
   file: File,
   type: DocumentType
 ): Promise<VendorDocumentItem> {
+  const paramValidation = VendorIdParamSchema.safeParse({ id: vendorId });
+  if (!paramValidation.success) {
+    throw new Error(`Validation Error: ${formatZodError(paramValidation.error)}`);
+  }
+
   const formData = new FormData();
   formData.append('file', file);
   formData.append('type', type);
