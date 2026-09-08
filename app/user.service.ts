@@ -40,6 +40,11 @@ export class UserService {
     return response.data;
   }
 
+  async mockLogin(userId: string): Promise<User> {
+    const response = await apiClient.post<{ success: boolean; user: User }>('/api/auth/mock-login', { userId });
+    return response.data.user;
+  }
+
   async logout(): Promise<void> {
     await apiClient.post('/api/auth/logout');
   }
@@ -47,6 +52,7 @@ export class UserService {
 
 export const userService = new UserService();
 export const fetchOpsCoordinators = () => userService.fetchOpsCoordinators();
+export const mockLogin = (userId: string) => userService.mockLogin(userId);
 export const loginWithGoogle = (payload: GoogleAuthPayload) => userService.loginWithGoogle(payload);
 export const getMe = () => userService.getMe();
 export const logout = () => userService.logout();
