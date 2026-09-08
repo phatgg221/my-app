@@ -7,7 +7,7 @@ import {
   VendorItem,
   fetchVendors,
   updateVendorStage,
-} from '@/services/client/vendorClientService';
+} from './vendor.service';
 import Navbar from './components/Navbar';
 import HistoryModal from './components/HistoryModal';
 import DocumentsModal from './components/DocumentsModal';

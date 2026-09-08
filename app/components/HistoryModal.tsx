@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Stage } from '@prisma/client';
-import { StageHistoryItem, fetchVendorHistory, VendorItem } from '@/services/client/vendorClientService';
+import { StageHistoryItem, fetchVendorHistory, VendorItem } from '@/app/vendor.service';
 import { X, History, User, Clock, ArrowRight, Loader2 } from 'lucide-react';
 
 interface HistoryModalProps {

@@ -1,12 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import apiClient from '@/lib/apiClient';
+import { fetchOpsCoordinators, User } from '@/app/user.service';
 
-export interface User {
-  id: string;
-  name: string;
-}
+export type { User };
 
 interface AuthContextType {
   users: User[];
@@ -26,12 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await apiClient.get<User[]>('/api/users');
-      setUsers(res.data);
-      if (res.data.length > 0) {
+      const data = await fetchOpsCoordinators();
+      setUsers(data);
+      if (data.length > 0) {
         const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('selected_coordinator_id') : null;
-        const matched = res.data.find((u) => u.id === savedUserId);
-        setCurrentUser(matched || res.data[0]);
+        const matched = data.find((u) => u.id === savedUserId);
+        setCurrentUser(matched || data[0]);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -44,14 +41,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let ignore = false;
 
-    apiClient.get<User[]>('/api/users')
-      .then((res) => {
+    fetchOpsCoordinators()
+      .then((data) => {
         if (!ignore) {
-          setUsers(res.data);
-          if (res.data.length > 0) {
+          setUsers(data);
+          if (data.length > 0) {
             const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('selected_coordinator_id') : null;
-            const matched = res.data.find((u) => u.id === savedUserId);
-            setCurrentUser(matched || res.data[0]);
+            const matched = data.find((u) => u.id === savedUserId);
+            setCurrentUser(matched || data[0]);
           }
         }
       })

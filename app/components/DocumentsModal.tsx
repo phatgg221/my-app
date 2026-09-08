@@ -7,7 +7,7 @@ import {
   VendorDocumentItem,
   fetchVendorDocuments,
   uploadVendorDocument,
-} from '@/services/client/vendorClientService';
+} from '@/app/vendor.service';
 import {
   X,
   FileText,
