@@ -39,6 +39,7 @@ export async function GET(
 
 /**
  * Controller: POST /api/vendors/[id]/documents
+ * Authentication is enforced upstream by Next.js Proxy/Middleware (proxy.ts).
  */
 export async function POST(
   request: NextRequest,

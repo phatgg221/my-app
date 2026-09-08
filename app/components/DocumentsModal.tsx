@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { DocumentType } from '@prisma/client';
+import { useAuth } from '@/context/AuthContext';
+import { GoogleGLogo } from './GoogleLogo';
 import {
   VendorItem,
   VendorDocumentItem,
@@ -21,6 +23,7 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  Lock,
 } from 'lucide-react';
 
 interface DocumentsModalProps {
@@ -46,6 +49,7 @@ export default function DocumentsModal({
   onClose,
   onDocumentsUpdated,
 }: DocumentsModalProps) {
+  const { isAuthenticated, loginWithRealGoogle } = useAuth();
   const [documents, setDocuments] = useState<VendorDocumentItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -122,6 +126,11 @@ export default function DocumentsModal({
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      setErrorMessage('You must be signed in with Google to upload documents.');
+      return;
+    }
+
     if (!vendor || !selectedFile) {
       setErrorMessage('Please select a file to upload.');
       return;
@@ -199,70 +208,94 @@ export default function DocumentsModal({
             </div>
           )}
 
-          {/* Upload Form */}
-          <form
-            onSubmit={handleUpload}
-            className="bg-orange-50/40 border border-orange-200/80 rounded-xl p-4.5 space-y-4"
-          >
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <UploadCloud className="w-4 h-4 text-[#EE4D2D]" />
-              Attach New Document (MinIO S3)
-            </h3>
+          {/* Upload Section: Form if authenticated, Locked Card if unauthenticated */}
+          {isAuthenticated ? (
+            <form
+              onSubmit={handleUpload}
+              className="bg-orange-50/40 border border-orange-200/80 rounded-xl p-4.5 space-y-4"
+            >
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <UploadCloud className="w-4 h-4 text-[#EE4D2D]" />
+                Attach New Document (MinIO S3)
+              </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Document Type Selector */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Document Classification
-                </label>
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value as DocumentType)}
-                  className="w-full bg-white text-slate-800 text-xs font-semibold rounded-xl px-3 py-2.5 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30 focus:border-[#EE4D2D]"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Document Type Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Document Classification
+                  </label>
+                  <select
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value as DocumentType)}
+                    className="w-full bg-white text-slate-800 text-xs font-semibold rounded-xl px-3 py-2.5 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30 focus:border-[#EE4D2D]"
+                  >
+                    {Object.entries(DOC_TYPE_LABELS).map(([val, label]) => (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* File Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Choose File
+                  </label>
+                  <input
+                    type="file"
+                    required
+                    onChange={handleFileChange}
+                    accept=".pdf,.png,.jpg,.jpeg,.webp"
+                    className="w-full text-xs text-slate-700 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#EE4D2D] file:text-white hover:file:bg-[#d73211] file:cursor-pointer bg-white border border-slate-300 rounded-xl p-1.5 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  disabled={uploading || !selectedFile}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#EE4D2D] hover:bg-[#d73211] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-orange-500/20 transition-all cursor-pointer"
                 >
-                  {Object.entries(DOC_TYPE_LABELS).map(([val, label]) => (
-                    <option key={val} value={val}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Uploading to S3...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      Upload & Attach
+                    </>
+                  )}
+                </button>
               </div>
-
-              {/* File Input */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Choose File
-                </label>
-                <input
-                  type="file"
-                  required
-                  onChange={handleFileChange}
-                  accept=".pdf,.png,.jpg,.jpeg,.webp"
-                  className="w-full text-xs text-slate-700 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#EE4D2D] file:text-white hover:file:bg-[#d73211] file:cursor-pointer bg-white border border-slate-300 rounded-xl p-1.5 focus:outline-none"
-                />
+            </form>
+          ) : (
+            <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 border border-orange-200 text-[#EE4D2D] flex items-center justify-center shadow-xs">
+                <Lock className="w-5 h-5" />
               </div>
-            </div>
-
-            <div className="flex justify-end pt-1">
+              <div className="max-w-md">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Document Upload Locked
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  You must be signed in with an authorized Google account (Ops Coordinator) to upload and attach compliance documents to MinIO S3 storage.
+                </p>
+              </div>
               <button
-                type="submit"
-                disabled={uploading || !selectedFile}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#EE4D2D] hover:bg-[#d73211] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                type="button"
+                onClick={loginWithRealGoogle}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95 group"
               >
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Uploading to S3...
-                  </>
-                ) : (
-                  <>
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    Upload & Attach
-                  </>
-                )}
+                <GoogleGLogo className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Sign in with Google to Upload</span>
               </button>
             </div>
-          </form>
+          )}
 
           {/* Existing Documents List */}
           <div>
@@ -279,7 +312,11 @@ export default function DocumentsModal({
               <div className="py-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl text-slate-500">
                 <FileText className="w-8 h-8 mx-auto text-slate-400 mb-1.5" />
                 <p className="text-xs font-bold text-slate-700">No documents attached to this vendor yet.</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Upload business licenses or IDs using the form above.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {isAuthenticated
+                    ? 'Upload business licenses or IDs using the form above.'
+                    : 'Sign in with Google above to upload business licenses or IDs.'}
+                </p>
               </div>
             ) : (
               <div className="space-y-2.5">
