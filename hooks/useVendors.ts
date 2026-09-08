@@ -5,20 +5,15 @@ import { Stage } from '@prisma/client';
 import { useAuth } from '@/context/AuthContext';
 import {
   VendorItem,
+  FilterMode,
+  VendorMetrics,
   fetchVendors,
   updateVendorStage,
 } from '@/app/vendor.service';
-import { usePagination, UsePaginationReturn } from './usePagination';
+import { UsePaginationReturn } from './usePagination';
 import { useToast, ToastState } from './useToast';
 
-export type FilterMode = 'ALL' | 'STUCK' | 'ACTIVE' | 'ONBOARDING';
-
-export interface VendorMetrics {
-  total: number;
-  stuck: number;
-  active: number;
-  onboarding: number;
-}
+export type { FilterMode, VendorMetrics };
 
 export const STAGE_CONFIG: Record<
   Stage,
@@ -72,27 +67,55 @@ export interface UseVendorsReturn {
   handleStageChange: (vendorId: string, newStage: Stage) => Promise<boolean>;
 }
 
-
-export function useVendors(pageSize = 5): UseVendorsReturn {
+export function useVendors(initialPageSize = 5): UseVendorsReturn {
   const { userId, currentUser, loginWithRealGoogle } = useAuth();
   const { toast, showToast } = useToast();
 
   const [vendors, setVendors] = useState<VendorItem[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [page, setPageState] = useState<number>(1);
+  const [pageSize, setPageSizeState] = useState<number>(initialPageSize);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQueryState] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [filterMode, setFilterModeState] = useState<FilterMode>('ALL');
   const [updatingStageVendorId, setUpdatingStageVendorId] = useState<string | null>(null);
+
+  const [metrics, setMetrics] = useState<VendorMetrics>({
+    total: 0,
+    stuck: 0,
+    active: 0,
+    onboarding: 0,
+  });
 
   // Active Modals
   const [historyVendor, setHistoryVendor] = useState<VendorItem | null>(null);
   const [documentsVendor, setDocumentsVendor] = useState<VendorItem | null>(null);
 
-  // Load vendors from Client Service
+  // Debounce search query input (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Load vendors from backend server service via client service
   const loadVendors = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchVendors();
-      setVendors(data);
+      const data = await fetchVendors({
+        search: debouncedSearch,
+        filter: filterMode,
+        page,
+        pageSize,
+      });
+      setVendors(data.vendors);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+      setMetrics(data.metrics);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to fetch vendors';
       console.error('Failed to load vendors:', message);
@@ -100,22 +123,30 @@ export function useVendors(pageSize = 5): UseVendorsReturn {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [debouncedSearch, filterMode, page, pageSize, showToast]);
 
-  // Initial fetch on mount
+  // Fetch vendors whenever debounced search query, filter tab, page, or pageSize changes
   useEffect(() => {
     let ignore = false;
 
-    fetchVendors()
+    fetchVendors({
+      search: debouncedSearch,
+      filter: filterMode,
+      page,
+      pageSize,
+    })
       .then((data) => {
         if (!ignore) {
-          setVendors(data);
+          setVendors(data.vendors);
+          setTotal(data.total);
+          setTotalPages(data.totalPages);
+          setMetrics(data.metrics);
         }
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Failed to fetch vendors';
-        console.error('Failed to load vendors:', message);
         if (!ignore) {
+          const message = err instanceof Error ? err.message : 'Failed to fetch vendors';
+          console.error('Failed to load vendors:', message);
           showToast(message, 'error');
         }
       })
@@ -128,51 +159,90 @@ export function useVendors(pageSize = 5): UseVendorsReturn {
     return () => {
       ignore = true;
     };
-  }, [showToast]);
-
-  // Filter vendors based on search query and tab mode
-  const filteredVendors = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return vendors.filter((v) => {
-      const matchesSearch =
-        !query ||
-        v.name.toLowerCase().includes(query) ||
-        v.region.toLowerCase().includes(query);
-
-      if (!matchesSearch) return false;
-
-      if (filterMode === 'STUCK') return v.isStuck;
-      if (filterMode === 'ACTIVE') return v.currentStage === Stage.ACTIVE;
-      if (filterMode === 'ONBOARDING') return v.currentStage !== Stage.ACTIVE;
-      return true;
-    });
-  }, [vendors, searchQuery, filterMode]);
-
-  // Client-side pagination hook applied to filtered results
-  const pagination = usePagination(filteredVendors, {
-    initialPageSize: pageSize,
-    pageSizeOptions: [5, 10, 20],
-  });
+  }, [debouncedSearch, filterMode, page, pageSize, showToast]);
 
   // Reset page to 1 when search or filter tab changes
   const setSearchQuery = useCallback((query: string) => {
     setSearchQueryState(query);
-    pagination.resetPage();
-  }, [pagination]);
+    setPageState(1);
+    setLoading(true);
+  }, []);
 
   const setFilterMode = useCallback((mode: FilterMode) => {
     setFilterModeState(mode);
-    pagination.resetPage();
-  }, [pagination]);
+    setPageState(1);
+    setLoading(true);
+  }, []);
 
-  // Calculate high-level KPI metrics
-  const metrics = useMemo<VendorMetrics>(() => {
-    const total = vendors.length;
-    const stuck = vendors.filter((v) => v.isStuck).length;
-    const active = vendors.filter((v) => v.currentStage === Stage.ACTIVE).length;
-    const onboarding = total - active;
-    return { total, stuck, active, onboarding };
-  }, [vendors]);
+  // Server-side pagination controls implementation adhering to UsePaginationReturn
+  const setPage = useCallback(
+    (newPage: number) => {
+      setPageState(Math.min(Math.max(1, newPage), Math.max(1, totalPages)));
+      setLoading(true);
+    },
+    [totalPages]
+  );
+
+  const setPageSize = useCallback((newSize: number) => {
+    setPageSizeState(newSize);
+    setPageState(1);
+    setLoading(true);
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    setPageState((p) => Math.min(p + 1, Math.max(1, totalPages)));
+    setLoading(true);
+  }, [totalPages]);
+
+  const goToPrevPage = useCallback(() => {
+    setPageState((p) => Math.max(p - 1, 1));
+    setLoading(true);
+  }, []);
+
+  const resetPage = useCallback(() => {
+    setPageState(1);
+  }, []);
+
+  const startIndex = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endIndex = Math.min(page * pageSize, total);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  const pagination: UsePaginationReturn<VendorItem> = useMemo(
+    () => ({
+      page,
+      pageSize,
+      totalPages,
+      totalItems: total,
+      paginatedItems: vendors,
+      startIndex,
+      endIndex,
+      hasNextPage,
+      hasPrevPage,
+      setPage,
+      setPageSize,
+      goToNextPage,
+      goToPrevPage,
+      resetPage,
+      pageSizeOptions: [5, 10, 20],
+    }),
+    [
+      page,
+      pageSize,
+      totalPages,
+      total,
+      vendors,
+      startIndex,
+      endIndex,
+      hasNextPage,
+      hasPrevPage,
+      setPage,
+      setPageSize,
+      goToNextPage,
+      goToPrevPage,
+      resetPage,
+    ]
+  );
 
   // Stage update handler delegating to Client Service
   const handleStageChange = useCallback(
@@ -205,7 +275,7 @@ export function useVendors(pageSize = 5): UseVendorsReturn {
 
   return {
     vendors,
-    filteredVendors,
+    filteredVendors: vendors,
     loading,
     searchQuery,
     setSearchQuery,

@@ -40,14 +40,47 @@ export interface VendorDocumentItem {
   uploadedAt: string;
 }
 
+export type FilterMode = 'ALL' | 'STUCK' | 'ACTIVE' | 'ONBOARDING';
+
+export interface VendorMetrics {
+  total: number;
+  stuck: number;
+  active: number;
+  onboarding: number;
+}
+
+export interface FetchVendorsParams {
+  search?: string;
+  filter?: FilterMode;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface FetchVendorsResponse {
+  vendors: VendorItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  metrics: VendorMetrics;
+}
+
 /**
  * Frontend Client Service for Vendors:
  * Abstracts all HTTP requests away from React UI components.
  * Performs client-side Zod validation before dispatching requests.
  */
 
-export async function fetchVendors(): Promise<VendorItem[]> {
-  const response = await apiClient.get<VendorItem[]>('/api/vendors');
+export async function fetchVendors(params?: FetchVendorsParams): Promise<FetchVendorsResponse> {
+  const queryParams: Record<string, string> = {};
+  if (params?.search?.trim()) queryParams.search = params.search.trim();
+  if (params?.filter) queryParams.filter = params.filter;
+  if (params?.page !== undefined) queryParams.page = String(params.page);
+  if (params?.pageSize !== undefined) queryParams.pageSize = String(params.pageSize);
+
+  const response = await apiClient.get<FetchVendorsResponse>('/api/vendors', {
+    params: queryParams,
+  });
   return response.data;
 }
 

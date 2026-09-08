@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
-import { Stage, DocumentType } from '@prisma/client';
+import { Stage, DocumentType, Prisma } from '@prisma/client';
+import { VendorQueryParams } from '@/lib/validations';
 
 export interface VendorWithMetrics {
   id: string;
@@ -13,10 +14,127 @@ export interface VendorWithMetrics {
   historiesCount: number;
 }
 
+export interface VendorMetrics {
+  total: number;
+  stuck: number;
+  active: number;
+  onboarding: number;
+}
+
+export interface GetVendorsResult {
+  vendors: VendorWithMetrics[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  metrics: VendorMetrics;
+}
+
 /**
  * Server Service: Encapsulates all domain business logic and database transactions.
  * Never called directly by UI components; called exclusively by API route controllers.
  */
+
+/**
+ * Fetch vendors with backend search, tab filtering, pagination, and metrics calculation.
+ */
+export async function getVendors(
+  params: Partial<VendorQueryParams> = {}
+): Promise<GetVendorsResult> {
+  const search = params.search?.trim();
+  const filter = params.filter ?? 'ALL';
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.max(1, params.pageSize ?? 5);
+
+  const now = Date.now();
+  // Vendors in any stage other than ACTIVE that have spent > 7 days (>= 8 full days) are flagged as Stuck
+  const stuckCutoff = new Date(now - 8 * 24 * 60 * 60 * 1000);
+
+  // Build filter condition for the requested query
+  const where: Prisma.VendorWhereInput = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { region: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (filter === 'ACTIVE') {
+    where.currentStage = Stage.ACTIVE;
+  } else if (filter === 'ONBOARDING') {
+    where.currentStage = { not: Stage.ACTIVE };
+  } else if (filter === 'STUCK') {
+    where.currentStage = { not: Stage.ACTIVE };
+    where.updatedAt = { lte: stuckCutoff };
+  }
+
+  // Concurrently execute:
+  // 1. Total matching the current filter & search query (for pagination)
+  // 2. Paginated vendor items
+  // 3. Overall system metrics for KPI cards and filter badges
+  const [filteredCount, vendors, totalCount, activeCount, stuckCount] = await Promise.all([
+    prisma.vendor.count({ where }),
+    prisma.vendor.findMany({
+      where,
+      include: {
+        documents: true,
+        histories: {
+          orderBy: { changedAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: 'asc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.vendor.count(),
+    prisma.vendor.count({ where: { currentStage: Stage.ACTIVE } }),
+    prisma.vendor.count({
+      where: {
+        currentStage: { not: Stage.ACTIVE },
+        updatedAt: { lte: stuckCutoff },
+      },
+    }),
+  ]);
+
+  const onboardingCount = totalCount - activeCount;
+  const totalPages = Math.max(1, Math.ceil(filteredCount / pageSize));
+
+  const mappedVendors: VendorWithMetrics[] = vendors.map((v) => {
+    const stageEnteredAt = v.histories[0]?.changedAt
+      ? new Date(v.histories[0].changedAt).getTime()
+      : new Date(v.updatedAt).getTime();
+    const daysInStage = Math.max(0, Math.floor((now - stageEnteredAt) / (1000 * 60 * 60 * 24)));
+    const isStuck = daysInStage > 7 && v.currentStage !== Stage.ACTIVE;
+
+    return {
+      id: v.id,
+      name: v.name,
+      region: v.region,
+      currentStage: v.currentStage,
+      updatedAt: v.updatedAt,
+      daysInStage,
+      isStuck,
+      documentsCount: v.documents.length,
+      historiesCount: v.histories.length,
+    };
+  });
+
+  return {
+    vendors: mappedVendors,
+    total: filteredCount,
+    page,
+    pageSize,
+    totalPages,
+    metrics: {
+      total: totalCount,
+      stuck: stuckCount,
+      active: activeCount,
+      onboarding: onboardingCount,
+    },
+  };
+}
 export async function getAllVendors(): Promise<VendorWithMetrics[]> {
   const vendors = await prisma.vendor.findMany({
     include: {

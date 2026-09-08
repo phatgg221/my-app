@@ -31,6 +31,30 @@ export const VendorIdParamSchema = z.object({
 export type VendorIdParam = z.infer<typeof VendorIdParamSchema>;
 
 /**
+ * Filter modes supported for vendor list
+ */
+export const VendorFilterEnum = z.enum(['ALL', 'STUCK', 'ACTIVE', 'ONBOARDING'], {
+  message: 'Filter mode must be one of: ALL, STUCK, ACTIVE, ONBOARDING',
+});
+export type VendorFilterEnumType = z.infer<typeof VendorFilterEnum>;
+
+/**
+ * Schema: GET /api/vendors Query Parameters
+ */
+export const VendorQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  filter: VendorFilterEnum.default('ALL'),
+  page: z.coerce.number().int().positive({ message: 'Page must be a positive integer.' }).default(1),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .positive({ message: 'Page size must be a positive integer.' })
+    .max(100, { message: 'Page size cannot exceed 100.' })
+    .default(5),
+});
+export type VendorQueryParams = z.infer<typeof VendorQuerySchema>;
+
+/**
  * Schema: Update Vendor Stage payload (Frontend & Backend)
  */
 export const UpdateVendorStageSchema = z.object({

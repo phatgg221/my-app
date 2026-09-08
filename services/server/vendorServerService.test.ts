@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+  getVendors,
   getAllVendors,
   updateVendorStageTransaction,
   getVendorStageHistory,
@@ -20,6 +21,7 @@ vi.mock('@/lib/prisma', () => {
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
     stageHistory: {
       findMany: vi.fn(),
@@ -151,6 +153,217 @@ describe('vendorServerService Unit Tests', () => {
 
       expect(result[0].daysInStage).toBe(5);
       expect(result[0].isStuck).toBe(false);
+    });
+  });
+
+  /* =======================================================================
+   * 1b. getVendors() with Backend Search, Filters, Pagination, & Metrics
+   * ======================================================================= */
+  describe('getVendors()', () => {
+    it('should return paginated vendors and metrics with default parameters', async () => {
+      const now = Date.now();
+      const mockVendors = [
+        {
+          id: 'v-1',
+          name: 'Saigon Retail',
+          region: 'HCMC',
+          currentStage: Stage.CONTRACT_SENT,
+          updatedAt: new Date(now - 2 * 24 * 60 * 60 * 1000),
+          histories: [{ changedAt: new Date(now - 2 * 24 * 60 * 60 * 1000) }],
+          documents: [],
+        },
+      ];
+
+      vi.mocked(prisma.vendor.count)
+        .mockResolvedValueOnce(1) // filteredCount
+        .mockResolvedValueOnce(6) // totalCount
+        .mockResolvedValueOnce(1) // activeCount
+        .mockResolvedValueOnce(3); // stuckCount
+
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue(mockVendors as any);
+
+      const result = await getVendors();
+
+      expect(prisma.vendor.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+          skip: 0,
+          take: 5,
+        })
+      );
+
+      expect(result.vendors).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(5);
+      expect(result.totalPages).toBe(1);
+      expect(result.metrics).toEqual({
+        total: 6,
+        active: 1,
+        stuck: 3,
+        onboarding: 5,
+      });
+    });
+
+    it('should apply case-insensitive search filter across name and region', async () => {
+      vi.mocked(prisma.vendor.count).mockResolvedValue(0);
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue([]);
+
+      await getVendors({ search: 'Hanoi', filter: 'ALL', page: 1, pageSize: 5 });
+
+      expect(prisma.vendor.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [
+              { name: { contains: 'Hanoi', mode: 'insensitive' } },
+              { region: { contains: 'Hanoi', mode: 'insensitive' } },
+            ],
+          },
+        })
+      );
+    });
+
+    it('should apply ACTIVE filter to Prisma query', async () => {
+      vi.mocked(prisma.vendor.count).mockResolvedValue(0);
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue([]);
+
+      await getVendors({ filter: 'ACTIVE', page: 1, pageSize: 5 });
+
+      expect(prisma.vendor.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            currentStage: Stage.ACTIVE,
+          },
+        })
+      );
+    });
+
+    it('should apply ONBOARDING filter to Prisma query', async () => {
+      vi.mocked(prisma.vendor.count).mockResolvedValue(0);
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue([]);
+
+      await getVendors({ filter: 'ONBOARDING', page: 1, pageSize: 5 });
+
+      expect(prisma.vendor.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            currentStage: { not: Stage.ACTIVE },
+          },
+        })
+      );
+    });
+
+    it('should apply STUCK filter with updatedAt cutoff to Prisma query', async () => {
+      vi.mocked(prisma.vendor.count).mockResolvedValue(0);
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue([]);
+
+      await getVendors({ filter: 'STUCK', page: 1, pageSize: 5 });
+
+      expect(prisma.vendor.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            currentStage: { not: Stage.ACTIVE },
+            updatedAt: { lte: expect.any(Date) },
+          },
+        })
+      );
+    });
+
+    it('should calculate correct pagination skip and take when page > 1', async () => {
+      vi.mocked(prisma.vendor.count)
+        .mockResolvedValueOnce(12) // filteredCount
+        .mockResolvedValueOnce(12) // totalCount
+        .mockResolvedValueOnce(2) // activeCount
+        .mockResolvedValueOnce(4); // stuckCount
+
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue([]);
+
+      const result = await getVendors({ page: 2, pageSize: 5 });
+
+      expect(prisma.vendor.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 5,
+          take: 5,
+        })
+      );
+      expect(result.page).toBe(2);
+      expect(result.pageSize).toBe(5);
+      expect(result.totalPages).toBe(3); // 12 items / 5 per page = 3 pages
+      expect(result.total).toBe(12);
+    });
+
+    it('should clamp non-positive page or pageSize to 1 and ignore whitespace-only search', async () => {
+      vi.mocked(prisma.vendor.count).mockResolvedValue(0);
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue([]);
+
+      const result = await getVendors({ page: -2, pageSize: 0, search: '   ' });
+
+      expect(prisma.vendor.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+          skip: 0,
+          take: 1,
+        })
+      );
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(1);
+
+      // Also test explicit undefined values to cover nullish coalescing defaults
+      const defaultResult = await getVendors({ page: undefined, pageSize: undefined });
+      expect(defaultResult.page).toBe(1);
+      expect(defaultResult.pageSize).toBe(5);
+    });
+
+    it('should map vendor properties correctly including isStuck and daysInStage', async () => {
+      const now = Date.now();
+      const tenDaysAgo = new Date(now - 10 * 24 * 60 * 60 * 1000);
+      const mockVendors = [
+        {
+          id: 'v-stuck',
+          name: 'Stuck Vendor',
+          region: 'Da Nang',
+          currentStage: Stage.KYC_DOCS_RECEIVED,
+          updatedAt: tenDaysAgo,
+          histories: [{ changedAt: tenDaysAgo }],
+          documents: [{ id: 'd-1' }],
+        },
+        {
+          id: 'v-active',
+          name: 'Active Vendor',
+          region: 'HCMC',
+          currentStage: Stage.ACTIVE,
+          updatedAt: tenDaysAgo,
+          histories: [{ changedAt: tenDaysAgo }],
+          documents: [],
+        },
+        {
+          id: 'v-fallback',
+          name: 'Fallback Vendor',
+          region: 'Hue',
+          currentStage: Stage.CONTRACT_SENT,
+          updatedAt: new Date(now - 3 * 24 * 60 * 60 * 1000),
+          histories: [],
+          documents: [],
+        },
+      ];
+
+      vi.mocked(prisma.vendor.count)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1);
+
+      vi.mocked(prisma.vendor.findMany).mockResolvedValue(mockVendors as any);
+
+      const result = await getVendors({ page: 1, pageSize: 10 });
+
+      expect(result.vendors).toHaveLength(3);
+      expect(result.vendors[0].isStuck).toBe(true);
+      expect(result.vendors[0].daysInStage).toBe(10);
+      expect(result.vendors[0].documentsCount).toBe(1);
+      expect(result.vendors[1].isStuck).toBe(false); // ACTIVE stage is never stuck
+      expect(result.vendors[2].isStuck).toBe(false); // 3 days is not stuck
+      expect(result.vendors[2].daysInStage).toBe(3);
     });
   });
 
