@@ -35,7 +35,7 @@ export async function getAllVendors(): Promise<VendorWithMetrics[]> {
     // Calculate days in stage based on the most recent stage transition or updatedAt
     const stageEnteredAt = v.histories[0]?.changedAt ? new Date(v.histories[0].changedAt).getTime() : new Date(v.updatedAt).getTime();
     const daysInStage = Math.max(0, Math.floor((now - stageEnteredAt) / (1000 * 60 * 60 * 24)));
-    
+
     // Vendors in any stage other than ACTIVE that have spent > 7 days are flagged as Stuck
     const isStuck = daysInStage > 7 && v.currentStage !== Stage.ACTIVE;
 
@@ -152,3 +152,50 @@ export async function getAllOpsCoordinators() {
     orderBy: { name: 'asc' },
   });
 }
+
+export interface UpsertGoogleUserInput {
+  name: string;
+  email: string;
+  avatar?: string;
+  role?: string;
+}
+
+/**
+ * Upserts a user authenticated via Google OAuth.
+ * If user with given email exists, updates profile; otherwise creates a new record.
+ */
+export async function upsertGoogleUser(input: UpsertGoogleUserInput) {
+  const existingUser = await prisma.user.findFirst({
+    where: { email: input.email },
+  });
+
+  if (existingUser) {
+    return await prisma.user.update({
+      where: { id: existingUser.id },
+      data: {
+        name: input.name,
+        avatar: input.avatar ?? existingUser.avatar,
+        role: input.role ?? existingUser.role,
+      },
+    });
+  }
+
+  return await prisma.user.create({
+    data: {
+      name: input.name,
+      email: input.email,
+      avatar: input.avatar,
+      role: input.role || 'Ops Coordinator',
+    },
+  });
+}
+
+/**
+ * Fetch a user by primary key ID
+ */
+export async function getUserById(id: string) {
+  return await prisma.user.findUnique({
+    where: { id },
+  });
+}
+

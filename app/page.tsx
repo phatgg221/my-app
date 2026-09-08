@@ -57,7 +57,7 @@ const STAGE_CONFIG: Record<
 };
 
 export default function Dashboard() {
-  const { userId, currentUser } = useAuth();
+  const { userId, currentUser, loginWithRealGoogle, authError, clearAuthError } = useAuth();
 
   const [vendors, setVendors] = useState<VendorItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -123,7 +123,8 @@ export default function Dashboard() {
   // Inline Stage Update Selector Handler
   const handleStageChange = async (vendorId: string, newStage: Stage) => {
     if (!userId) {
-      showToast('Please select an active Ops Coordinator first.', 'error');
+      showToast('Please sign in with Google to update vendor stages.', 'error');
+      loginWithRealGoogle();
       return;
     }
 
@@ -170,6 +171,24 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#F6F6F6] text-slate-800 flex flex-col">
       {/* Global Navbar with Shopee Orange Branding */}
       <Navbar />
+
+      {/* Auth Notification Banner */}
+      {authError && (
+        <div className="max-w-7xl mx-auto w-full px-4 lg:px-8 pt-4">
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-2xl flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-2.5 text-xs font-semibold">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{authError}</span>
+            </div>
+            <button
+              onClick={clearAuthError}
+              className="text-xs text-red-600 hover:text-red-800 font-bold px-2 py-1 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toast && (

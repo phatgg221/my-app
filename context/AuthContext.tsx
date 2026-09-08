@@ -1,60 +1,59 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchOpsCoordinators, User } from '@/app/user.service';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getMe, logout, User } from '@/app/user.service';
 
 export type { User };
 
 interface AuthContextType {
-  users: User[];
   currentUser: User | null;
   userId: string;
-  setCurrentUser: (user: User) => void;
+  isAuthenticated: boolean;
+  isGoogleConfigured: boolean;
   isLoading: boolean;
-  refreshUsers: () => Promise<void>;
+  authError: string | null;
+  loginWithRealGoogle: () => void;
+  signOut: () => Promise<void>;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isGoogleConfigured, setIsGoogleConfigured] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      const data = await fetchOpsCoordinators();
-      setUsers(data);
-      if (data.length > 0) {
-        const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('selected_coordinator_id') : null;
-        const matched = data.find((u) => u.id === savedUserId);
-        setCurrentUser(matched || data[0]);
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Failed to load Ops Coordinators:', message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
 
-    fetchOpsCoordinators()
-      .then((data) => {
-        if (!ignore) {
-          setUsers(data);
-          if (data.length > 0) {
-            const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('selected_coordinator_id') : null;
-            const matched = data.find((u) => u.id === savedUserId);
-            setCurrentUser(matched || data[0]);
+    // Fetch active server session
+    getMe()
+      .then((session) => {
+        if (ignore) return;
+        setIsGoogleConfigured(session.isGoogleConfigured);
+        setCurrentUser(session.user);
+
+        // Check URL parameters for OAuth redirect status / errors
+        if (typeof window !== 'undefined') {
+          const searchParams = new URLSearchParams(window.location.search);
+          const err = searchParams.get('auth_error');
+          if (err) {
+            if (err === 'missing_credentials') {
+              setAuthError('Google OAuth is not configured yet. Please input your GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local.');
+            } else {
+              setAuthError(`Google Sign-In failed: ${decodeURIComponent(err)}`);
+            }
+            window.history.replaceState({}, '', window.location.pathname);
+          } else if (searchParams.get('auth_success')) {
+            window.history.replaceState({}, '', window.location.pathname);
           }
         }
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Failed to load Ops Coordinators:', message);
+        console.error('Error loading user session:', message);
       })
       .finally(() => {
         if (!ignore) {
@@ -67,22 +66,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const handleSetCurrentUser = (user: User) => {
-    setCurrentUser(user);
+  const loginWithRealGoogle = () => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('selected_coordinator_id', user.id);
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign('/api/auth/google/login');
     }
   };
+
+  const signOut = async () => {
+    try {
+      await logout();
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+  };
+
+  const clearAuthError = () => setAuthError(null);
 
   return (
     <AuthContext.Provider
       value={{
-        users,
         currentUser,
         userId: currentUser?.id || '',
-        setCurrentUser: handleSetCurrentUser,
+        isAuthenticated: Boolean(currentUser),
+        isGoogleConfigured,
         isLoading,
-        refreshUsers: fetchUsers,
+        authError,
+        loginWithRealGoogle,
+        signOut,
+        clearAuthError,
       }}
     >
       {children}

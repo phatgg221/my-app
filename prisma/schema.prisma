@@ -23,7 +23,12 @@ enum DocumentType {
 model User {
   id        String         @id @default(uuid())
   name      String
+  email     String?
+  avatar    String?
+  role      String?        @default("Ops Coordinator")
   histories StageHistory[]
+
+  @@index([email])
 }
 
 model Vendor {

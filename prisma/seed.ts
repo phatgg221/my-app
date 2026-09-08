@@ -11,19 +11,34 @@ async function main() {
   await prisma.user.deleteMany({});
 
   // 1. Seed Ops Coordinators
-  const alex = await prisma.user.create({
-    data: { name: 'Alex Chen (Senior Ops)' },
+  const sarah = await prisma.user.create({
+    data: {
+      name: 'Sarah Jenkins',
+      email: 'sarah.jenkins@shopee.com',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+      role: 'Compliance Lead',
+    },
   });
 
-  const sarah = await prisma.user.create({
-    data: { name: 'Sarah Jenkins (Compliance Lead)' },
+  const alex = await prisma.user.create({
+    data: {
+      name: 'Alex Chen',
+      email: 'alex.chen@shopee.com',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      role: 'Senior Ops Coordinator',
+    },
   });
 
   const david = await prisma.user.create({
-    data: { name: 'David Nguyen (Onboarding Specialist)' },
+    data: {
+      name: 'David Nguyen',
+      email: 'david.nguyen@shopee.com',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      role: 'Onboarding Specialist',
+    },
   });
 
-  console.log(`Created 3 Ops Coordinators: ${alex.name}, ${sarah.name}, ${david.name}`);
+  console.log(`Created 3 Ops Coordinators: ${sarah.name}, ${alex.name}, ${david.name}`);
 
   // Helper date generators for "Days in Stage"
   const now = new Date();
