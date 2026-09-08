@@ -17,7 +17,14 @@ export const metadata: Metadata = {
   title: 'Shopee | Vendor Onboarding & Ops Centre',
   description: 'Manage vendor onboarding stages, compliance audit trails, and KYC document repository.',
   icons: {
-    icon: '/shopee-logo.png',
+    icon: [
+      { url: '/shopee-logo.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon.png', sizes: '64x64', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/shopee-logo.png',
   },
 };
 
