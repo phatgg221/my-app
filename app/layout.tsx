@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Shopee | Vendor Onboarding & Ops Centre',
   description: 'Manage vendor onboarding stages, compliance audit trails, and KYC document repository.',
+  icons: {
+    icon: '/shopee-logo.png',
+  },
 };
 
 export default function RootLayout({

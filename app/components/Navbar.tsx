@@ -1,19 +1,27 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldCheck, ChevronDown, ShoppingBag } from 'lucide-react';
+import { ShieldCheck, ChevronDown } from 'lucide-react';
 
 export default function Navbar() {
   const { users, currentUser, setCurrentUser, isLoading } = useAuth();
 
   return (
-    <header className="bg-gradient-to-r from-[#EE4D2D] via-[#f05330] to-[#FF5722] text-white shadow-md sticky top-0 z-30 px-4 lg:px-8 py-3.5">
+    <header className="bg-gradient-to-r from-[#EE4D2D] via-[#f05330] to-[#FF5722] text-white shadow-md sticky top-0 z-30 px-4 lg:px-8 py-3">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Brand / Logo */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-md text-[#EE4D2D] font-black text-2xl tracking-tighter">
-            <ShoppingBag className="w-6 h-6 stroke-[2.5]" />
+          <div className="h-11 w-11 rounded-xl bg-white flex items-center justify-center shadow-md overflow-hidden p-1 shrink-0">
+            <Image
+              src="/shopee-logo.png"
+              alt="Shopee Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+              priority
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
