@@ -1,13 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Stage } from '@prisma/client';
 import { useAuth } from '@/context/AuthContext';
-import {
-  VendorItem,
-  fetchVendors,
-  updateVendorStage,
-} from './vendor.service';
+import { useVendors, STAGE_CONFIG } from '@/hooks/useVendors';
 import Navbar from './components/Navbar';
 import HistoryModal from './components/HistoryModal';
 import DocumentsModal from './components/DocumentsModal';
@@ -21,152 +17,50 @@ import {
   RefreshCw,
   Building2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
-  Layers,
   Lock,
 } from 'lucide-react';
 
-const STAGE_CONFIG: Record<
-  Stage,
-  { label: string; badgeClass: string; stepNumber: number }
-> = {
-  CONTRACT_SENT: {
-    label: 'Contract Sent',
-    badgeClass: 'bg-sky-50 text-sky-700 border-sky-200',
-    stepNumber: 1,
-  },
-  CONTRACT_SIGNED: {
-    label: 'Contract Signed',
-    badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    stepNumber: 2,
-  },
-  KYC_DOCS_RECEIVED: {
-    label: 'KYC Docs Received',
-    badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
-    stepNumber: 3,
-  },
-  KYC_VERIFIED: {
-    label: 'KYC Verified',
-    badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
-    stepNumber: 4,
-  },
-  ACTIVE: {
-    label: 'Active Vendor',
-    badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    stepNumber: 5,
-  },
-};
-
 export default function Dashboard() {
-  const { userId, currentUser, isAuthenticated, loginWithRealGoogle, authError, clearAuthError } = useAuth();
+  const { isAuthenticated, loginWithRealGoogle, authError, clearAuthError } = useAuth();
 
-  const [vendors, setVendors] = useState<VendorItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterMode, setFilterMode] = useState<'ALL' | 'STUCK' | 'ACTIVE' | 'ONBOARDING'>('ALL');
-  const [updatingStageVendorId, setUpdatingStageVendorId] = useState<string | null>(null);
+  // Encapsulated Vendor State, Filtering, Metrics, and Pagination via Custom Hook
+  const {
+    loading,
+    searchQuery,
+    setSearchQuery,
+    filterMode,
+    setFilterMode,
+    updatingStageVendorId,
+    metrics,
+    pagination,
+    historyVendor,
+    setHistoryVendor,
+    documentsVendor,
+    setDocumentsVendor,
+    toast,
+    loadVendors,
+    handleStageChange,
+  } = useVendors(5); // Default 5 vendors per page
 
-  // Active Modals
-  const [historyVendor, setHistoryVendor] = useState<VendorItem | null>(null);
-  const [documentsVendor, setDocumentsVendor] = useState<VendorItem | null>(null);
-
-  // Toast notification
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
-  }, []);
-
-  const loadVendors = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await fetchVendors();
-      setVendors(data);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch vendors';
-      console.error('Failed to load vendors:', message);
-      showToast(message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    fetchVendors()
-      .then((data) => {
-        if (!ignore) {
-          setVendors(data);
-        }
-      })
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Failed to fetch vendors';
-        console.error('Failed to load vendors:', message);
-        if (!ignore) {
-          showToast(message, 'error');
-        }
-      })
-      .finally(() => {
-        if (!ignore) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [showToast]);
-
-  // Inline Stage Update Selector Handler
-  const handleStageChange = async (vendorId: string, newStage: Stage) => {
-    if (!userId) {
-      showToast('Please sign in with Google to update vendor stages.', 'error');
-      loginWithRealGoogle();
-      return;
-    }
-
-    try {
-      setUpdatingStageVendorId(vendorId);
-
-      // Call Client Service directly (as mandated by AGENTS.md)
-      await updateVendorStage(vendorId, newStage, userId);
-
-      showToast(`Vendor moved to "${STAGE_CONFIG[newStage].label}" by ${currentUser?.name}!`);
-
-      // Refresh list to recalculate days in stage & audit history
-      await loadVendors();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update vendor stage';
-      console.error('Stage update failed:', message);
-      showToast(message, 'error');
-    } finally {
-      setUpdatingStageVendorId(null);
-    }
-  };
-
-  // Metrics
-  const totalVendors = vendors.length;
-  const stuckVendorsCount = vendors.filter((v) => v.isStuck).length;
-  const activeVendorsCount = vendors.filter((v) => v.currentStage === Stage.ACTIVE).length;
-  const onboardingCount = totalVendors - activeVendorsCount;
-
-  // Filtered vendors
-  const filteredVendors = vendors.filter((v) => {
-    const matchesSearch =
-      v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.region.toLowerCase().includes(searchQuery.toLowerCase());
-
-    if (!matchesSearch) return false;
-
-    if (filterMode === 'STUCK') return v.isStuck;
-    if (filterMode === 'ACTIVE') return v.currentStage === Stage.ACTIVE;
-    if (filterMode === 'ONBOARDING') return v.currentStage !== Stage.ACTIVE;
-    return true;
-  });
+  const {
+    page,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedVendors,
+    startIndex,
+    endIndex,
+    hasNextPage,
+    hasPrevPage,
+    setPage,
+    setPageSize,
+    goToNextPage,
+    goToPrevPage,
+    pageSizeOptions,
+  } = pagination;
 
   return (
     <div className="min-h-screen bg-[#F6F6F6] text-slate-800 flex flex-col">
@@ -182,8 +76,9 @@ export default function Dashboard() {
               <span>{authError}</span>
             </div>
             <button
+              type="button"
               onClick={clearAuthError}
-              className="text-xs text-red-600 hover:text-red-800 font-bold px-2 py-1 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+              className="text-xs text-red-600 hover:text-red-900 font-bold ml-4 cursor-pointer"
             >
               Dismiss
             </button>
@@ -194,11 +89,10 @@ export default function Dashboard() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold border animate-in slide-in-from-bottom-3 duration-200 bg-white ${
-            toast.type === 'success'
-              ? 'text-emerald-800 border-l-4 border-l-emerald-500 border-slate-200'
-              : 'text-red-800 border-l-4 border-l-red-500 border-slate-200'
-          }`}
+          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-3 text-xs font-bold animate-in fade-in slide-in-from-bottom-5 duration-200 ${toast.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-red-50 border-red-200 text-red-900'
+            }`}
         >
           {toast.type === 'success' ? (
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -223,17 +117,16 @@ export default function Dashboard() {
                 <Building2 className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-3xl font-black text-slate-900 mt-2">{totalVendors}</p>
+            <p className="text-3xl font-black text-slate-900 mt-2">{metrics.total}</p>
             <p className="text-[11px] text-slate-500 mt-1">Managed across all sales regions</p>
           </div>
 
           {/* Card 2: Stuck Vendors */}
           <div
-            className={`border rounded-2xl p-5 shadow-sm transition-all ${
-              stuckVendorsCount > 0
+            className={`border rounded-2xl p-5 shadow-sm transition-all ${metrics.stuck > 0
                 ? 'bg-rose-50/70 border-rose-200 ring-1 ring-rose-200'
                 : 'bg-white border-slate-200/80'
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -244,95 +137,91 @@ export default function Dashboard() {
                 <Clock className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-3xl font-black text-rose-700 mt-2">{stuckVendorsCount}</p>
+            <p className="text-3xl font-black text-rose-700 mt-2">{metrics.stuck}</p>
             <p className="text-[11px] text-rose-600/90 font-medium mt-1">Action required by coordinator</p>
           </div>
 
           {/* Card 3: In Onboarding */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 In Onboarding
               </span>
               <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
-                <Layers className="w-4 h-4" />
+                <Clock className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-3xl font-black text-amber-600 mt-2">{onboardingCount}</p>
+            <p className="text-3xl font-black text-slate-900 mt-2">{metrics.onboarding}</p>
             <p className="text-[11px] text-slate-500 mt-1">Progressing through KYC pipeline</p>
           </div>
 
           {/* Card 4: Active Vendors */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow transition-shadow">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Active Vendors
               </span>
               <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
             </div>
-            <p className="text-3xl font-black text-emerald-600 mt-2">{activeVendorsCount}</p>
+            <p className="text-3xl font-black text-slate-900 mt-2">{metrics.active}</p>
             <p className="text-[11px] text-slate-500 mt-1">Fully verified and trading</p>
           </div>
         </section>
 
-        {/* Action Controls & Filters */}
+        {/* Filter and Search Toolbar */}
         <section className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Search Box */}
+          {/* Search Input */}
           <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
             <input
               type="text"
               placeholder="Search vendor name or region..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 placeholder:text-slate-400 text-xs font-medium rounded-xl pl-10 pr-4 py-2.5 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30 focus:border-[#EE4D2D] transition-all"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30 focus:border-[#EE4D2D] transition-all"
             />
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
             <button
               onClick={() => setFilterMode('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                filterMode === 'ALL'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${filterMode === 'ALL'
                   ? 'bg-[#EE4D2D] text-white border-[#EE4D2D] shadow-sm shadow-orange-500/20'
                   : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
-              }`}
+                }`}
             >
-              All Vendors ({vendors.length})
+              All Vendors ({metrics.total})
             </button>
             <button
               onClick={() => setFilterMode('STUCK')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterMode === 'STUCK'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${filterMode === 'STUCK'
                   ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-500/20'
                   : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-              }`}
+                }`}
             >
               <AlertTriangle className="w-3.5 h-3.5" />
-              Stuck Only ({stuckVendorsCount})
+              Stuck Only ({metrics.stuck})
             </button>
             <button
               onClick={() => setFilterMode('ONBOARDING')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                filterMode === 'ONBOARDING'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${filterMode === 'ONBOARDING'
                   ? 'bg-[#EE4D2D] text-white border-[#EE4D2D] shadow-sm shadow-orange-500/20'
                   : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
-              }`}
+                }`}
             >
-              In Onboarding ({onboardingCount})
+              In Onboarding ({metrics.onboarding})
             </button>
             <button
               onClick={() => setFilterMode('ACTIVE')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                filterMode === 'ACTIVE'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${filterMode === 'ACTIVE'
                   ? 'bg-[#EE4D2D] text-white border-[#EE4D2D] shadow-sm shadow-orange-500/20'
                   : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
-              }`}
+                }`}
             >
-              Active ({activeVendorsCount})
+              Active ({metrics.active})
             </button>
 
             {/* Refresh Button */}
@@ -393,7 +282,7 @@ export default function Dashboard() {
                       <p className="font-semibold text-xs text-slate-700">Loading vendor records...</p>
                     </td>
                   </tr>
-                ) : filteredVendors.length === 0 ? (
+                ) : paginatedVendors.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-16 text-center text-slate-500">
                       <Building2 className="w-10 h-10 mx-auto text-slate-300 mb-2" />
@@ -402,7 +291,7 @@ export default function Dashboard() {
                     </td>
                   </tr>
                 ) : (
-                  filteredVendors.map((v) => {
+                  paginatedVendors.map((v) => {
                     const isUpdating = updatingStageVendorId === v.id;
                     const stageInfo = STAGE_CONFIG[v.currentStage] || {
                       label: v.currentStage,
@@ -413,11 +302,10 @@ export default function Dashboard() {
                     return (
                       <tr
                         key={v.id}
-                        className={`transition-colors ${
-                          v.isStuck
+                        className={`transition-colors ${v.isStuck
                             ? 'bg-rose-50/50 border-l-4 border-l-rose-500 hover:bg-rose-50/80'
                             : 'hover:bg-orange-50/20'
-                        }`}
+                          }`}
                       >
                         {/* 1. Vendor Name */}
                         <td className="py-4 px-5">
@@ -448,13 +336,11 @@ export default function Dashboard() {
                                 disabled={isUpdating || !isAuthenticated}
                                 value={v.currentStage}
                                 onChange={(e) => handleStageChange(v.id, e.target.value as Stage)}
-                                className={`text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border appearance-none transition-all ${
-                                  stageInfo.badgeClass
-                                } ${
-                                  isUpdating || !isAuthenticated
+                                className={`text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border appearance-none transition-all ${stageInfo.badgeClass
+                                  } ${isUpdating || !isAuthenticated
                                     ? 'opacity-50 cursor-not-allowed'
                                     : 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30'
-                                }`}
+                                  }`}
                                 title={!isAuthenticated ? 'Sign in with Google to change vendor stage' : 'Change Vendor Stage'}
                               >
                                 {Object.entries(STAGE_CONFIG).map(([stageKey, config]) => (
@@ -501,10 +387,7 @@ export default function Dashboard() {
                             {/* View History Button */}
                             <button
                               onClick={() => {
-                                if (!isAuthenticated) {
-                                  showToast('Please sign in with Google to view audit history.', 'error');
-                                  return;
-                                }
+                                if (!isAuthenticated) return;
                                 setHistoryVendor(v);
                               }}
                               disabled={!isAuthenticated}
@@ -522,10 +405,7 @@ export default function Dashboard() {
                             {/* Manage Documents Button */}
                             <button
                               onClick={() => {
-                                if (!isAuthenticated) {
-                                  showToast('Please sign in with Google to manage documents.', 'error');
-                                  return;
-                                }
+                                if (!isAuthenticated) return;
                                 setDocumentsVendor(v);
                               }}
                               disabled={!isAuthenticated}
@@ -540,9 +420,8 @@ export default function Dashboard() {
                               <span className="hidden sm:inline">Documents</span>
                               {v.documentsCount > 0 && (
                                 <span
-                                  className={`px-1.5 py-0.2 text-[10px] font-black rounded-full ${
-                                    isAuthenticated ? 'bg-[#EE4D2D] text-white' : 'bg-slate-300 text-slate-600'
-                                  }`}
+                                  className={`px-1.5 py-0.2 text-[10px] font-black rounded-full ${isAuthenticated ? 'bg-[#EE4D2D] text-white' : 'bg-slate-300 text-slate-600'
+                                    }`}
                                 >
                                   {v.documentsCount}
                                 </span>
@@ -557,6 +436,83 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls Bar */}
+          {!loading && totalItems > 0 && (
+            <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+              {/* Pagination Info & Page Size Selector */}
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                <p className="font-medium text-slate-500">
+                  Showing <span className="font-bold text-slate-800">{startIndex}</span> to{' '}
+                  <span className="font-bold text-slate-800">{endIndex}</span> of{' '}
+                  <span className="font-bold text-slate-800">{totalItems}</span> vendors
+                </p>
+
+                <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+                  <label htmlFor="pageSizeSelect" className="text-slate-400 text-[11px] font-medium hidden md:inline">
+                    Per page:
+                  </label>
+                  <select
+                    id="pageSizeSelect"
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30"
+                  >
+                    {pageSizeOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt} / page
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Navigation Controls */}
+              <div className="flex items-center gap-1.5 w-full sm:w-auto justify-center sm:justify-end">
+                {/* Previous Page Button */}
+                <button
+                  type="button"
+                  onClick={goToPrevPage}
+                  disabled={!hasPrevPage}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Page Number Buttons */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    const isCurrent = p === page;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPage(p)}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${isCurrent
+                            ? 'bg-[#EE4D2D] text-white shadow-xs shadow-orange-500/20'
+                            : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Next Page Button */}
+                <button
+                  type="button"
+                  onClick={goToNextPage}
+                  disabled={!hasNextPage}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </main>
 
