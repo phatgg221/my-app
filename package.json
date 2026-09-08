@@ -9,20 +9,32 @@
     "lint": "eslint",
     "db:up": "docker compose -f ../docker-compose.yml up -d",
     "db:down": "docker compose -f ../docker-compose.yml down",
-    "db:logs": "docker compose -f ../docker-compose.yml logs -f"
+    "db:logs": "docker compose -f ../docker-compose.yml logs -f",
+    "db:studio": "prisma studio --port 5555",
+    "dev:all": "npm run db:up && concurrently -n \"NEXT,STUDIO\" -c \"cyan,magenta\" \"next dev\" \"prisma studio --port 5555\"",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio --port 5555"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "next": "16.3.4",
+    "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
