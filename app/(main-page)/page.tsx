@@ -6,6 +6,7 @@ import { VendorProvider, useVendorContext } from '@/context/VendorContext';
 import Navbar from '@/app/components/Navbar';
 import HistoryModal from '@/app/components/HistoryModal';
 import DocumentsModal from '@/app/components/DocumentsModal';
+import StageChangeModal from '@/app/components/StageChangeModal';
 import {
   KpiCards,
   FilterToolbar,
@@ -23,6 +24,8 @@ function DashboardContent() {
     setHistoryVendor,
     documentsVendor,
     setDocumentsVendor,
+    stageVendor,
+    setStageVendor,
     loadVendors,
   } = useVendorContext();
 
@@ -100,6 +103,14 @@ function DashboardContent() {
           vendor={documentsVendor}
           onClose={() => setDocumentsVendor(null)}
           onDocumentsUpdated={loadVendors}
+        />
+      )}
+
+      {/* Stage Change Confirmation & Details Modal Overlay */}
+      {stageVendor && (
+        <StageChangeModal
+          vendor={stageVendor}
+          onClose={() => setStageVendor(null)}
         />
       )}
     </div>

@@ -61,6 +61,8 @@ export interface UseVendorsReturn {
   setHistoryVendor: (v: VendorItem | null) => void;
   documentsVendor: VendorItem | null;
   setDocumentsVendor: (v: VendorItem | null) => void;
+  stageVendor: VendorItem | null;
+  setStageVendor: (v: VendorItem | null) => void;
   toast: ToastState | null;
   showToast: (message: string, type?: 'success' | 'error') => void;
   loadVendors: () => Promise<void>;
@@ -79,7 +81,7 @@ export function useVendors(initialPageSize = 5): UseVendorsReturn {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQueryState] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
-  const [filterMode, setFilterModeState] = useState<FilterMode>('ALL');
+  const [filterMode, setFilterModeState] = useState<FilterMode>('ONBOARDING');
   const [updatingStageVendorId, setUpdatingStageVendorId] = useState<string | null>(null);
 
   const [metrics, setMetrics] = useState<VendorMetrics>({
@@ -92,6 +94,7 @@ export function useVendors(initialPageSize = 5): UseVendorsReturn {
   // Active Modals
   const [historyVendor, setHistoryVendor] = useState<VendorItem | null>(null);
   const [documentsVendor, setDocumentsVendor] = useState<VendorItem | null>(null);
+  const [stageVendor, setStageVendor] = useState<VendorItem | null>(null);
 
   // Debounce search query input (300ms)
   useEffect(() => {
@@ -288,6 +291,8 @@ export function useVendors(initialPageSize = 5): UseVendorsReturn {
     setHistoryVendor,
     documentsVendor,
     setDocumentsVendor,
+    stageVendor,
+    setStageVendor,
     toast,
     showToast,
     loadVendors,

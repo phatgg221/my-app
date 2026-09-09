@@ -22,9 +22,9 @@ export default function VendorTable() {
     loading,
     pagination,
     updatingStageVendorId,
-    handleStageChange,
     setHistoryVendor,
     setDocumentsVendor,
+    setStageVendor,
   } = useVendorContext();
 
   const { paginatedItems: paginatedVendors } = pagination;
@@ -96,45 +96,37 @@ export default function VendorTable() {
                     </span>
                   </td>
 
-                  {/* 3. Current Stage & Inline Stage Update Selector */}
+                  {/* 3. Current Stage & Stage Transition Trigger */}
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <select
-                          aria-label="Change Vendor Stage"
-                          disabled={isUpdating || !isAuthenticated}
-                          value={v.currentStage}
-                          onChange={(e) => handleStageChange(v.id, e.target.value as Stage)}
-                          className={`text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border appearance-none transition-all ${
-                            stageInfo.badgeClass
-                          } ${
-                            isUpdating || !isAuthenticated
-                              ? 'opacity-50 cursor-not-allowed'
-                              : 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#EE4D2D]/30'
-                          }`}
-                          title={!isAuthenticated ? 'Sign in with Google to change vendor stage' : 'Change Vendor Stage'}
-                        >
-                          {Object.entries(STAGE_CONFIG).map(([stageKey, config]) => (
-                            <option
-                              key={stageKey}
-                              value={stageKey}
-                              className="bg-white text-slate-800"
-                            >
-                              Step {config.stepNumber}: {config.label}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute right-2.5 top-2.5 pointer-events-none text-slate-500">
-                          {isUpdating ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#EE4D2D]" />
-                          ) : !isAuthenticated ? (
-                            <Lock className="w-3 h-3 text-slate-400" />
-                          ) : (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isAuthenticated) return;
+                        setStageVendor(v);
+                      }}
+                      disabled={!isAuthenticated || isUpdating}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer hover:shadow-xs group ${
+                        stageInfo.badgeClass
+                      } ${
+                        !isAuthenticated
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:brightness-95 active:scale-95'
+                      }`}
+                      title={
+                        !isAuthenticated
+                          ? 'Sign in or select a coordinator to change stage'
+                          : 'Click to view vendor details and transition stage'
+                      }
+                    >
+                      <span>Step {stageInfo.stepNumber}: {stageInfo.label}</span>
+                      {isUpdating ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#EE4D2D]" />
+                      ) : !isAuthenticated ? (
+                        <Lock className="w-3 h-3 text-slate-400" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-700 transition-transform group-hover:translate-y-0.5" />
+                      )}
+                    </button>
                   </td>
 
                   {/* 4. Days in Stage (with Stuck Indicator) */}
