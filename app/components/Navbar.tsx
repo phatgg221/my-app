@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { GoogleGLogo } from './GoogleLogo';
-import { ChevronDown, LogOut, RefreshCw, ShieldCheck, UserCheck } from 'lucide-react';
+import { ChevronDown, LogOut, RefreshCw, ShieldCheck, UserCheck, User } from 'lucide-react';
 
 export default function Navbar() {
   const {
@@ -108,20 +108,18 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen((prev) => !prev)}
                 className="flex items-center gap-2.5 bg-white text-slate-800 rounded-xl pl-1.5 pr-3 py-1 shadow-sm hover:shadow-md border border-orange-100 transition-all cursor-pointer group"
               >
-                <div className="relative w-7 h-7 rounded-lg overflow-hidden bg-slate-200 shrink-0 border border-slate-200">
-                  {currentUser.avatar ? (
+                <div className="w-7 h-7 rounded-lg overflow-hidden bg-orange-100 border border-orange-200 flex items-center justify-center text-[#EE4D2D] shrink-0">
+                  {currentUser.avatar && !currentUser.avatar.includes('unsplash') ? (
                     <Image
                       src={currentUser.avatar}
                       alt={currentUser.name}
-                      fill
+                      width={28}
+                      height={28}
                       unoptimized
-                      className="object-cover"
-                      sizes="28px"
+                      className="w-full h-full object-cover rounded-lg"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#EE4D2D] text-white font-bold text-xs">
-                      {currentUser.name.charAt(0)}
-                    </div>
+                    <User className="w-4 h-4" />
                   )}
                 </div>
 
@@ -147,20 +145,18 @@ export default function Navbar() {
                 <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-40 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
                   {/* User Info Header */}
                   <div className="p-3 bg-slate-50 rounded-xl mb-1 flex items-center gap-3">
-                    <div className="relative w-10 h-10 rounded-full overflow-hidden bg-slate-200 shrink-0 border border-slate-200 shadow-inner">
-                      {currentUser.avatar ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-orange-100 border border-orange-200 flex items-center justify-center text-[#EE4D2D] shrink-0 shadow-inner">
+                      {currentUser.avatar && !currentUser.avatar.includes('unsplash') ? (
                         <Image
                           src={currentUser.avatar}
                           alt={currentUser.name}
-                          fill
+                          width={40}
+                          height={40}
                           unoptimized
-                          className="object-cover"
-                          sizes="40px"
+                          className="w-full h-full object-cover rounded-full"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-[#EE4D2D] text-white font-bold text-sm">
-                          {currentUser.name.charAt(0)}
-                        </div>
+                        <User className="w-5 h-5" />
                       )}
                     </div>
                     <div className="min-w-0">

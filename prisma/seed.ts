@@ -15,7 +15,7 @@ async function main() {
     data: {
       name: 'Sarah Jenkins',
       email: 'sarah.jenkins@shopee.com',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+      avatar: null,
       role: 'Compliance Lead',
     },
   });
@@ -24,7 +24,7 @@ async function main() {
     data: {
       name: 'Alex Chen',
       email: 'alex.chen@shopee.com',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      avatar: null,
       role: 'Senior Ops Coordinator',
     },
   });
@@ -33,7 +33,7 @@ async function main() {
     data: {
       name: 'David Nguyen',
       email: 'david.nguyen@shopee.com',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      avatar: null,
       role: 'Onboarding Specialist',
     },
   });
