@@ -51,11 +51,8 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-1.5">
                 Shopee
-                <span className="text-orange-200 font-medium text-base">Ops Centre</span>
+                <span className="text-orange-200 font-medium text-base">— Vendor Onboarding</span>
               </h1>
-              <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
-                Vendor Onboarding
-              </span>
             </div>
             <p className="text-xs text-orange-100 font-medium">
               Stage Management • KYC Compliance • S3 Document Storage

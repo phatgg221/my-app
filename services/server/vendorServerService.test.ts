@@ -536,9 +536,6 @@ describe('vendorServerService Unit Tests', () => {
     });
   });
 
-  /* =======================================================================
-   * 7. upsertGoogleUser()
-   * ======================================================================= */
   describe('upsertGoogleUser()', () => {
     it('should update existing user if email is already present', async () => {
       const existingUser = {
@@ -669,9 +666,7 @@ describe('vendorServerService Unit Tests', () => {
     });
   });
 
-  /* =======================================================================
-   * 8. getUserById()
-   * ======================================================================= */
+
   describe('getUserById()', () => {
     it('should find user by primary key ID', async () => {
       const mockUser = { id: 'u-123', name: 'Alex' };
