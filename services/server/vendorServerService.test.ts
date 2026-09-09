@@ -434,6 +434,116 @@ describe('vendorServerService Unit Tests', () => {
       expect(result.history.newStage).toBe(Stage.CONTRACT_SIGNED);
       expect(result.history.userId).toBe('user-ops-1');
     });
+
+    it('should reject advancing to KYC_DOCS_RECEIVED (Step 3) if vendor has no documents uploaded', async () => {
+      const existingVendor = {
+        id: 'vendor-no-docs',
+        name: 'No Docs Co',
+        region: 'Hanoi',
+        currentStage: Stage.CONTRACT_SIGNED,
+      };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          vendor: {
+            findUnique: vi.fn().mockResolvedValue(existingVendor),
+          },
+          document: {
+            count: vi.fn().mockResolvedValue(0),
+          },
+        };
+        return await callback(tx);
+      });
+
+      await expect(
+        updateVendorStageTransaction('vendor-no-docs', Stage.KYC_DOCS_RECEIVED, 'user-1')
+      ).rejects.toThrow(
+        'Cannot advance to KYC Docs Received, KYC Verified, or Active because no documents have been uploaded for this vendor.'
+      );
+    });
+
+    it('should reject advancing to KYC_VERIFIED (Step 4) or ACTIVE (Step 5) if vendor has no documents uploaded', async () => {
+      const existingVendor = {
+        id: 'vendor-no-docs',
+        name: 'No Docs Co',
+        region: 'Hanoi',
+        currentStage: Stage.CONTRACT_SIGNED,
+      };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          vendor: {
+            findUnique: vi.fn().mockResolvedValue(existingVendor),
+          },
+          document: {
+            count: vi.fn().mockResolvedValue(0),
+          },
+        };
+        return await callback(tx);
+      });
+
+      await expect(
+        updateVendorStageTransaction('vendor-no-docs', Stage.KYC_VERIFIED, 'user-1')
+      ).rejects.toThrow(
+        'Cannot advance to KYC Docs Received, KYC Verified, or Active because no documents have been uploaded for this vendor.'
+      );
+
+      await expect(
+        updateVendorStageTransaction('vendor-no-docs', Stage.ACTIVE, 'user-1')
+      ).rejects.toThrow(
+        'Cannot advance to KYC Docs Received, KYC Verified, or Active because no documents have been uploaded for this vendor.'
+      );
+    });
+
+    it('should allow advancing to KYC_DOCS_RECEIVED (Step 3) if vendor has uploaded documents', async () => {
+      const existingVendor = {
+        id: 'vendor-with-docs',
+        name: 'Docs Co',
+        region: 'HCMC',
+        currentStage: Stage.CONTRACT_SIGNED,
+      };
+
+      const updatedVendor = {
+        ...existingVendor,
+        currentStage: Stage.KYC_DOCS_RECEIVED,
+        updatedAt: new Date(),
+      };
+
+      const createdHistory = {
+        id: 'history-2',
+        vendorId: 'vendor-with-docs',
+        userId: 'user-ops-1',
+        previousStage: Stage.CONTRACT_SIGNED,
+        newStage: Stage.KYC_DOCS_RECEIVED,
+        changedAt: new Date(),
+        user: { id: 'user-ops-1', name: 'Sarah Jenkins' },
+      };
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          vendor: {
+            findUnique: vi.fn().mockResolvedValue(existingVendor),
+            update: vi.fn().mockResolvedValue(updatedVendor),
+          },
+          document: {
+            count: vi.fn().mockResolvedValue(2),
+          },
+          stageHistory: {
+            create: vi.fn().mockResolvedValue(createdHistory),
+          },
+        };
+        return await callback(tx);
+      });
+
+      const result = await updateVendorStageTransaction(
+        'vendor-with-docs',
+        Stage.KYC_DOCS_RECEIVED,
+        'user-ops-1'
+      );
+
+      expect(result.vendor.currentStage).toBe(Stage.KYC_DOCS_RECEIVED);
+      expect(result.history.newStage).toBe(Stage.KYC_DOCS_RECEIVED);
+    });
   });
 
   /* =======================================================================

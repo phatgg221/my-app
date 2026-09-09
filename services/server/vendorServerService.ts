@@ -187,6 +187,24 @@ export async function updateVendorStageTransaction(vendorId: string, newStage: S
 
     const previousStage = vendor.currentStage;
 
+    // Business Rule: Transition to Step 3, 4, or 5 requires at least 1 uploaded document
+    const DOCUMENT_REQUIRED_STAGES: Stage[] = [
+      Stage.KYC_DOCS_RECEIVED,
+      Stage.KYC_VERIFIED,
+      Stage.ACTIVE,
+    ];
+
+    if (DOCUMENT_REQUIRED_STAGES.includes(newStage)) {
+      const documentCount = await tx.document.count({
+        where: { vendorId },
+      });
+      if (documentCount === 0) {
+        throw new Error(
+          'Cannot advance to KYC Docs Received, KYC Verified, or Active because no documents have been uploaded for this vendor.'
+        );
+      }
+    }
+
     // 1. Update the Vendor's stage and timestamp
     const updatedVendor = await tx.vendor.update({
       where: { id: vendorId },

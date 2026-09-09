@@ -36,6 +36,6 @@ export async function PATCH(request: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update vendor stage';
     console.error('[API PATCH /api/vendors/stage] Error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, message }, { status: 400 });
   }
 }
